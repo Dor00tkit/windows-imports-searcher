@@ -195,8 +195,8 @@ class SearchCommand(BaseCommand):
         merged_obj = MergeCommand.merge_files(args.input_indexes)
 
         for term in args.functions:
-            for base_dir, files in merged_obj.iteritems():
-                for file_name, file_metadata in files.iteritems():
+            for base_dir, files in merged_obj.items():
+                for file_name, file_metadata in files.items():
                     file_path = os.path.join(base_dir, file_name)
                     try:
                         SearchCommand.search_file_metadata(args.unique, file_path, file_metadata, term)
@@ -232,12 +232,12 @@ class SearchCommand(BaseCommand):
 
         found = False
 
-        for module_name, imported_functions in imports.iteritems():
+        for module_name, imported_functions in imports.items():
             if not fnmatch.fnmatch(module_name, module):
                 continue
 
             for imported_func in imported_functions:
-                if not isinstance(imported_func, unicode):
+                if not isinstance(imported_func, str):
                     continue
                 if fnmatch.fnmatch(imported_func, func):
                     found = True
@@ -257,7 +257,7 @@ class SearchCommand(BaseCommand):
         exports = file_metadata.get('exports', [])
 
         for exported_function in exports:
-            if not isinstance(exported_function, unicode):
+            if not isinstance(exported_function, str):
                 continue
             if fnmatch.fnmatch(exported_function, func):
                 found = True

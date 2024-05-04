@@ -83,7 +83,7 @@ modules:
  
 We can index several directories together. The existing index.json was created by the following command:
 
-<code>python windows_imports_searcher.py search -i c:\windows c:\windows\system32 c:\windows\syswow64 -o index.json</code>
+<code>python windows_imports_searcher.py index -i c:\windows c:\windows\system32 c:\windows\syswow64 -o index.json</code>
 
 
 ## Search
