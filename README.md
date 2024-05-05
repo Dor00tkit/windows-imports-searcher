@@ -1,4 +1,11 @@
 # windows-imports-searcher
+Forked from:
+https://github.com/repnz/windows-imports-searcher
+
+My changes:
+ * Fixed some Python 3 errors
+ * Added support for enumerating directories recursively - [index command]
+ * Added support for processing multiple files simultaneously (multiprocessing) - [index command]
 
 ## What is this?
 
@@ -33,8 +40,7 @@ This tool has several sub-commands that it supports.
 This is the first step before you can search. This operation indexes all the executables in the given directories.
 
 ```cmd
-usage: Windows Imports Searcher index [-h] -i INPUT_DIRS [INPUT_DIRS ...] -o
-                                      OUTPUT
+usage: Windows Imports Searcher index [-h] -i INPUT_DIRS [INPUT_DIRS ...] -o OUTPUT [-r]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -42,6 +48,7 @@ optional arguments:
                         List of directories to parse.
   -o OUTPUT, --output OUTPUT
                         Output index file to create
+  -r, --recursively     Recursively enumerate files in the given directories
 ```
 
 Examples:

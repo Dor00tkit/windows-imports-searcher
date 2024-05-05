@@ -4,6 +4,8 @@ import os
 import json
 import argparse
 import fnmatch
+import glob
+import multiprocessing
 
 
 TITLE = 'Windows Imports Searcher'
@@ -77,6 +79,9 @@ class IndexCommand(BaseCommand):
         parser.add_argument('-o', '--output', required=True,
                                   help="Output index file to create")
 
+        parser.add_argument('-r', '--recursively', required=False, default=False, action='store_true',
+                            help="Recursively enumerate files in the given directory path")
+
     @classmethod
     def validate_args(cls, args):
         args.input_dirs = set(args.input_dirs)
@@ -88,44 +93,75 @@ class IndexCommand(BaseCommand):
         if os.path.exists(args.output):
             raise CommandError("Output file already exists")
 
+    @staticmethod
+    def enumerate_dirs(path):
+        """
+        Recursively enumerate directories in the given directory path using glob.
+        """
+        dirs = [path]
+        for dir_path in dirs:
+            for entry in glob.glob(os.path.join(dir_path, '*')):
+                try:
+                    if os.path.isdir(entry):
+                        dirs.append(entry)
+                except PermissionError:
+                    pass
+        return dirs
+
     @classmethod
     def run(cls, args):
         index_obj = {}
 
         for input_dir in args.input_dirs:
             input_dir = os.path.abspath(input_dir)
-            dir_obj = IndexCommand.get_directory_executables_metadata(input_dir)
-            index_obj[input_dir] = dir_obj
-
-        write_json(args.output, index_obj)
+            if args.recursively:
+                dirs = cls.enumerate_dirs(input_dir)
+                for directory in dirs:
+                    dir_obj = IndexCommand.get_directory_executables_metadata(directory)
+                    index_obj[directory] = dir_obj
+                    write_json(args.output, index_obj)
+            else:
+                dir_obj = IndexCommand.get_directory_executables_metadata(input_dir)
+                index_obj[input_dir] = dir_obj
+                write_json(args.output, index_obj)
 
     @staticmethod
     def get_directory_executables_metadata(directory):
         executable_metadata = {}
+        files_paths = []
+        results = None
+        try:
+            for file_name in os.listdir(directory):
+                if not (file_name.endswith('.exe') or file_name.endswith('.dll') or file_name.endswith('.sys')
+                        or file_name.endswith('.ocx')):
+                    continue
+                file_path = os.path.join(directory, file_name)
+                files_paths.append(file_path)
+        except PermissionError:
+            pass
 
-        for file_name in os.listdir(directory):
-            if not (file_name.endswith('.exe') or file_name.endswith('.dll') or file_name.endswith('.sys') or file_name.endswith('.ocx')):
-                continue
+        try:
+            pool = multiprocessing.Pool()
+            results = pool.map(IndexCommand.get_executable_metadata, files_paths)
+            pool.close()
+            pool.join()
+        except Exception as e:
+            print(e)
 
-            file_path = os.path.join(directory, file_name)
-            print("Indexing", file_path)
-
-            # noinspection PyBroadException
-            try:
-                executable_metadata[file_name] = IndexCommand.get_executable_metadata(file_path)
-            except Exception as e:
-                executable_metadata[file_name] = {'Error': str(e)}
+        for result in results:
+            executable_metadata[result[0]] = result[1]
 
         return executable_metadata
 
     @staticmethod
     def get_executable_metadata(file_path):
+        file_name = os.path.basename(file_path)
         pe = pefile.PE(file_path)
-
-        return {
+        print("Indexing", file_path)
+        return (file_name, {
             'imports': IndexCommand.get_imports(pe),
             'exports': IndexCommand.get_exports(pe)
-        }
+        })
 
     @staticmethod
     def get_imports(pe):
@@ -337,6 +373,6 @@ def write_json(file_path, obj):
     with open(file_path, 'w') as f:
         json.dump(obj, f, indent=2)
 
+
 if __name__ == '__main__':
     main()
-
